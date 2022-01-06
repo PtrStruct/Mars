@@ -31,8 +31,7 @@ namespace Server.Core
             {
                 var client = _listener.AcceptTcpClient();
                 _handler.AddPlayer(new Player(client));
-            }
-
+            }   
         }
 
         void Update()

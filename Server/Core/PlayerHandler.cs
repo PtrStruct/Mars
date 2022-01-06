@@ -36,15 +36,16 @@ namespace Server.Core
 
                 /* Fetch Data */
                 Players[i].Update();
-
-                /* Global Queue Send */
-                /* Sends Data That Needs To Be Broadcasted */
-                for (int z = 0; z < Players.Length; z++)
-                {
-                    if (z == i || Players[z] == null) continue;
-                    Players[z].Broadcast();
-                }
             }
+
+            for (int i = 0; i < Players.Length; i++)
+            {
+                if (Players[i] == null) continue;
+
+                var players = Players.ToList().Where(x => x != null && x.Id != Players[i].Id).ToArray();
+                Players[i].Broadcast(players);
+            }
+
         }
     }
 }

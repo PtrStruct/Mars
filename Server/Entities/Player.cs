@@ -23,12 +23,20 @@ namespace Server.Entities
             _handler.Invoke(_stream);
         }
 
-        public void Broadcast()
+        public void Broadcast(Player[] toPlayers)
         {
-            if (!_handler.BroadcastReady) return;
+            var data = _handler.Fetch();
+            if (data == null) return;
 
-            _client.Client.Send(_handler.Fetch());
-            _handler.BroadcastReady = false;
+            for (int i = 0; i < toPlayers.Length; i++)
+            {
+                toPlayers[i].Send(data);
+            }
+        }
+
+        public void Send(byte[] payload)
+        {
+            _client.Client.Send(payload);
         }
     }
 }

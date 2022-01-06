@@ -1,11 +1,7 @@
 ﻿using Serilog;
 using Server.Entities;
-using System;
 using System.Collections.Concurrent;
-using System.Collections.Generic;
-using System.Linq;
 using System.Text;
-using System.Threading.Tasks;
 
 namespace Server.IO
 {
@@ -47,24 +43,31 @@ namespace Server.IO
 
         public byte[] Fetch()
         {
+            var ms = new MemoryStream();
             _outPackets.TryDequeue(out var p);
-            return p.Payload;
+            
+            if (p != null)
+            {
+                ms.WriteByte((byte)p.OpCode);
+                ms.Write(BitConverter.GetBytes(p.Length), 0, BitConverter.GetBytes(p.Length).Length);
+                ms.Write(p.Payload);
+                return ms.ToArray();
+            }
+            return null;
         }
 
         void MessageReceived(NetStream stream)
         {
-            BroadcastReady = true;
             var length = stream.ReadInt32();
             var payload = stream.ReadBytes(length);
-            Log.Information(Encoding.ASCII.GetString(payload));
-            _outPackets.Enqueue(new Packet 
+            Log.Information($"ASCII: {Encoding.ASCII.GetString(payload)}");
+            Log.Information($"Length: {length}");
+            _outPackets.Enqueue(new Packet
             {
                 OpCode = 2,
                 Length = length,
                 Payload = payload
             });
         }
-
-
     }
 }
