@@ -19,18 +19,22 @@ namespace Server.Entities
 
         public void Update()
         {
-            if (!_stream.IsDataAvailable()) return;
+            
             _handler.Invoke(_stream);
         }
 
         public void Broadcast(Player[] toPlayers)
         {
             var data = _handler.Fetch();
-            if (data == null) return;
+            if (data.Count < 1) return;
 
             for (int i = 0; i < toPlayers.Length; i++)
             {
-                toPlayers[i].Send(data);
+                foreach (var item in data)
+                {
+                    Console.WriteLine($"Total packets: {data.Count}");
+                    toPlayers[i].Send(item);
+                }
             }
         }
 

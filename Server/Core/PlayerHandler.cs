@@ -29,15 +29,14 @@ namespace Server.Core
         /// </summary>
         public void Update()
         {
-            /* Fetch Data For Each User So They Can Build Their Packets */
+            /* Fetch Data and Process Data */
             for (int i = 0; i < Players.Length; i++)
             {
                 if (Players[i] == null) continue;
-
-                /* Fetch Data */
                 Players[i].Update();
             }
 
+            /* Update */
             for (int i = 0; i < Players.Length; i++)
             {
                 if (Players[i] == null) continue;

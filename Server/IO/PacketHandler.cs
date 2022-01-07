@@ -9,7 +9,7 @@ namespace Server.IO
     {
         private delegate void PacketHandlerDelegate(NetStream stream);
         private ConcurrentDictionary<byte, PacketHandlerDelegate> _packets;
-        private ConcurrentQueue<Packet> _outPackets;
+        private List<Packet> _outPackets;
 
         Player _player;
         public bool BroadcastReady { get; set; }
@@ -17,7 +17,7 @@ namespace Server.IO
         public PacketHandler(Player player)
         {
             _player = player;
-            _outPackets = new ConcurrentQueue<Packet>();
+            _outPackets = new List<Packet>();
             InitializePackets();
         }
 
@@ -28,32 +28,58 @@ namespace Server.IO
             _packets.TryAdd(1, MessageReceived);
         }
 
+        /// <summary>
+        /// Reads at most 5 packets each tick.
+        /// </summary>
+        /// <param name="stream"></param>
         public void Invoke(NetStream stream)
         {
-            PacketHandlerDelegate packet;
-
-            var opCode = stream.ReadByte();
-            Log.Information($"[{_player.Id}] - Received OpCode: {opCode}");
-            if (_packets.TryGetValue(opCode, out packet))
+            for (int i = 0; i < 5; i++)
             {
-                Log.Information($"Invoking: {packet.Method.Name}");
-                packet.Invoke(stream);
+                if (!stream.IsDataAvailable()) continue;
+
+                var opCode = stream.ReadByte();
+                Log.Information($"[{_player.Id}] - Received OpCode: {opCode}");
+                if (_packets.TryGetValue(opCode, out PacketHandlerDelegate packet))
+                {
+                    Log.Information($"Invoking: {packet.Method.Name}");
+                    packet.Invoke(stream);
+                }
             }
+            
         }
 
-        public byte[] Fetch()
+        /// <summary>
+        /// Process 2 packets per OpCode
+        /// </summary>
+        /// <returns></returns>
+        public List<byte[]> Fetch()
         {
+            List<byte[]> outData = new List<byte[]>();
+            var packets = _outPackets.GroupBy(x => x.OpCode);
             var ms = new MemoryStream();
-            _outPackets.TryDequeue(out var p);
-            
-            if (p != null)
+
+            foreach (var group in packets)
             {
-                ms.WriteByte((byte)p.OpCode);
-                ms.Write(BitConverter.GetBytes(p.Length), 0, BitConverter.GetBytes(p.Length).Length);
-                ms.Write(p.Payload);
-                return ms.ToArray();
+
+                var toSend = group.Take(2).ToList();
+                
+                for (int i = 0; i < toSend.Count; i++)
+                {
+                    ms.WriteByte((byte)toSend[i].OpCode);
+                    ms.Write(BitConverter.GetBytes(toSend[i].Length));
+                    ms.Write(toSend[i].Payload);
+                    outData.Add(ms.ToArray());
+                    ms.SetLength(0);
+                }
+
+                foreach (var item in toSend)
+                {
+                    _outPackets.Remove(item);
+                }
             }
-            return null;
+
+            return outData;
         }
 
         void MessageReceived(NetStream stream)
@@ -62,7 +88,7 @@ namespace Server.IO
             var payload = stream.ReadBytes(length);
             Log.Information($"ASCII: {Encoding.ASCII.GetString(payload)}");
             Log.Information($"Length: {length}");
-            _outPackets.Enqueue(new Packet
+            _outPackets.Add(new Packet
             {
                 OpCode = 2,
                 Length = length,

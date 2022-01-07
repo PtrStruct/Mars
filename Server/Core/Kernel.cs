@@ -1,5 +1,6 @@
 ﻿using Serilog;
 using Server.Entities;
+using Server.Misc;
 using System.Diagnostics;
 using System.Net;
 using System.Net.Sockets;
@@ -13,7 +14,7 @@ namespace Server.Core
 
         public Kernel()
         {
-            _listener = new TcpListener(IPAddress.Parse("127.0.0.1"), 7171);
+            _listener = new TcpListener(IPAddress.Parse(Constants.IPAddress), Constants.Port);
             _handler = new PlayerHandler(128);
         }
 
@@ -31,7 +32,7 @@ namespace Server.Core
             {
                 var client = _listener.AcceptTcpClient();
                 _handler.AddPlayer(new Player(client));
-            }   
+            }
         }
 
         void Update()
